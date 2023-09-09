@@ -128,7 +128,7 @@ class _UsbCanFormState extends State<UsbCanForm> {
                       .toList(),
                   onSelected: (value) {
                     setState(() {
-                      mode = value ?? CanWidgetMode.hexMode;
+                      mode = value as CanWidgetMode? ?? CanWidgetMode.hexMode;
                     });
                   },
                 ),

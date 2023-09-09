@@ -1,10 +1,11 @@
 library usbcan_plugins;
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:cobs2/cobs2.dart';
-import 'serial.dart';
+import 'package:usb_serial/usb_serial.dart';
 
 class CANFrame {
   late int canId;
@@ -73,7 +74,7 @@ class CANFrame {
 enum Command { normal, establishmentOfCommunication }
 
 class UsbCan {
-  Device? device;
+  UsbDevice? device;
   bool connectionEstablished = false;
   Stream<CANFrame>? _stream;
   Stream<CANFrame> get stream {
@@ -82,9 +83,9 @@ class UsbCan {
   }
 
   Future<bool> connectUSB() async {
-    Device? newDevice;
+    UsbDevice? newDevice;
     //Search a usbcan.
-    List<Device> devices = await Serial.listDevices();
+    List<UsbDevice> devices = await UsbSerial.listDevices();
     for (var element in devices) {
       if (Platform.isAndroid) {
         if (element.vid == 0x0483 && element.pid == 0x0409) {
@@ -115,7 +116,8 @@ class UsbCan {
       return false;
     }
     if (device!.port == null) return false;
-    device!.port!.setPortParameters(115200);
+    device!.port!.setPortParameters(
+        115200, UsbPort.DATABITS_8, UsbPort.STOPBITS_1, UsbPort.PARITY_NONE);
 
     print("Connecting to ...");
     //open a port.
