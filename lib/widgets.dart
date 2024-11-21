@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:typed_data';
 
-import 'package:usbcan_plugins/usbcan.dart';
+import 'package:usbcan_plugins/frames.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -128,7 +128,7 @@ class _UsbCanFormState extends State<UsbCanForm> {
                       .toList(),
                   onSelected: (value) {
                     setState(() {
-                      mode = value as CanWidgetMode? ?? CanWidgetMode.hexMode;
+                      mode = value ?? CanWidgetMode.hexMode;
                     });
                   },
                 ),

@@ -6,70 +6,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:cobs2/cobs2.dart';
 import 'package:usb_serial/usb_serial.dart';
-
-class CANFrame {
-  late int canId;
-  late bool isRtr;
-  late bool isExtended;
-  late bool isError;
-  late Uint8List data;
-  /*                                                                     
-   uint8_t command :( if it is normal can frame, it is 0x00. )<<4 
-                    | (isRtr << 2 | isExtended << 1 | isError)                  
-   uint8_t id[4] : can id                                                 
-   uint8_t dlc : data length                                              
-   uint8_t data[8] : data                                                 
-   */
-  CANFrame(Uint8List frame) {
-    isRtr = (frame[0] & 0x04) != 0;
-    isExtended = (frame[0] & 0x02) != 0;
-    isError = (frame[0] & 0x01) != 0;
-    canId = (frame[1] << 24) | (frame[2] << 16) | (frame[3] << 8) | frame[4];
-    //frame[5] is dlc.
-    data = frame.sublist(6, 6 + frame[5]);
-  }
-
-  Uint8List toUint8List() {
-    Uint8List frame = Uint8List(6 + data.length);
-    frame[0] = (isRtr ? 0x04 : 0x00) |
-        (isExtended ? 0x02 : 0x00) |
-        (isError ? 0x01 : 0x00);
-    frame[1] = (canId >> 24) & 0xFF;
-    frame[2] = (canId >> 16) & 0xFF;
-    frame[3] = (canId >> 8) & 0xFF;
-    frame[4] = canId & 0xFF;
-    frame[5] = data.length;
-    frame.setRange(6, 6 + data.length, data);
-    return frame;
-  }
-
-  CANFrame.fromIdAndData(this.canId, this.data,
-      {this.isRtr = false, this.isExtended = false, this.isError = false});
-
-  @override
-  String toString() {
-    return 'CANFrame{canId: $canId, isRtr: $isRtr, isExtended: $isExtended, isError: $isError, data: $data}';
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CANFrame &&
-          canId == other.canId &&
-          isRtr == other.isRtr &&
-          isExtended == other.isExtended &&
-          isError == other.isError &&
-          data == other.data;
-
-  @override
-  int get hashCode {
-    return canId.hashCode ^
-        isRtr.hashCode ^
-        isExtended.hashCode ^
-        isError.hashCode ^
-        data.hashCode;
-  }
-}
+import 'package:usbcan_plugins/frames.dart';
 
 enum Command { normal, establishmentOfCommunication }
 
@@ -127,7 +64,7 @@ class UsbCan {
     return true;
   }
 
-  Future<bool> sendFrame(CANFrame frame) async {
+  Future<bool> sendFrame(Frame frame) async {
     return await _sendUint8List(frame.toUint8List());
   }
 
@@ -186,8 +123,10 @@ class UsbCan {
   Stream<Uint8List> _usbRawStream() async* {
     List<int> buffer = List.generate(64, (index) => 0);
     int bufferIndex = 0;
-    final stream = device!.port!.inputStream;
-    await for (Uint8List data in stream!) {
+    final stream = device!.port!.inputStream!.handleError((error) {
+      print(error);
+    });
+    await for (Uint8List data in stream) {
       for (int i = 0; i < data.length; i++) {
         if (data[i] == 0) {
           ByteData decoded = ByteData(64);
